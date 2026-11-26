@@ -1,0 +1,30 @@
+name: Mise à jour de l'agenda
+
+on:
+  schedule:
+    - cron: "0 4 * * *"   # tous les jours à 4h UTC (5h à Paris en hiver)
+  workflow_dispatch:       # bouton « Run workflow » pour lancer à la main
+
+permissions:
+  contents: write
+
+jobs:
+  agenda:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Installer le navigateur invisible
+        run: |
+          pip install playwright==1.47.0
+          python -m playwright install --with-deps chromium
+      - name: Lire l'agenda et générer la page
+        run: python generate.py
+      - name: Enregistrer la page si elle a changé
+        run: |
+          git config user.name "agenda-bot"
+          git config user.email "agenda-bot@users.noreply.github.com"
+          git add docs/index.html
+          git diff --cached --quiet || (git commit -m "Mise à jour de l'agenda" && git push)
