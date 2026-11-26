@@ -37,8 +37,13 @@ EXTRAIRE = """() => {
 
 def lire_agenda(page):
     """Parcourt toutes les pages de l'agenda et renvoie la liste des événements."""
-    page.goto(AGENDA, wait_until="networkidle", timeout=60000)
-    page.wait_for_selector(".event-list-item", timeout=30000)
+    page.goto(AGENDA, wait_until="domcontentloaded", timeout=60000)
+    try:
+        page.wait_for_selector(".event-list-item", timeout=45000)
+    except Exception:
+        print("Agenda non chargé. Titre de la page :", page.title())
+        print(page.inner_text("body")[:3000])
+        raise
     evenements, vus = [], set()
     for _ in range(50):  # garde-fou
         nouveaux = 0
@@ -113,7 +118,11 @@ def main():
     maintenant = datetime.now(timezone.utc).replace(tzinfo=None)
     with sync_playwright() as p:
         navigateur = p.chromium.launch()
-        page = navigateur.new_page(locale="fr-FR")
+        page = navigateur.new_page(
+            locale="fr-FR",
+            viewport={"width": 1366, "height": 900},
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                       "(KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36")
         evenements = lire_agenda(page)
         print(f"{len(evenements)} événements trouvés dans l'agenda")
         if len(evenements) < MINIMUM:
